@@ -1,25 +1,30 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react';
 import moment from 'moment';
-import { Table, Input, message, Image } from 'antd';
+import { Table, Input, message, Image, Card, Space, Typography } from 'antd';
 import axios from 'axios';
+import { SearchOutlined } from '@ant-design/icons';
 
+const { Title } = Typography;
 const { Search } = Input;
+
 const columns = [
     {
         title: "#",
         dataIndex: "id",
-        width: "40px",
+        width: 50,
+        align: 'center',
     },
     {
         title: "Title",
         dataIndex: "title",
-        width: "200px",
+        width: 200,
     },
     {
-        title: "Price",
+        title: "Price ($)",
         dataIndex: "price",
-        render: (price) => parseFloat(price).toFixed(2),
-        width: "80px"
+        render: (price) => `$${parseFloat(price).toFixed(2)}`,
+        width: 100,
+        align: 'right'
     },
     {
         title: "Description",
@@ -28,38 +33,40 @@ const columns = [
     {
         title: "Category",
         dataIndex: "category",
-        width: "120px"
+        width: 120,
     },
     {
         title: "Sold",
         dataIndex: "sold",
-        render: (sold) => sold ? "Yes" : "No",
-        width: "50px"
+        render: (sold) => sold ? "✔ Yes" : "✖ No",
+        width: 80,
+        align: 'center'
     },
     {
         title: "Date",
         dataIndex: "dateOfSale",
         render: (date) => moment(date).format("DD MMM YYYY"),
-        width: "100px"
+        width: 120,
+        align: 'center'
     },
     {
         title: "Image",
         dataIndex: "image",
-        render: (url) => <Image src={url} alt="Product Image" />,
-        width: "80px"
+        render: (url) => <Image src={url} alt="Product" width={50} height={50} />,
+        width: 100,
+        align: 'center'
     }
 ];
 
 function Transactions({ month, monthText }) {
-    const [data, setData] = useState();
+    const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [tableParams, setTableParams] = useState({
         pagination: {
             current: 1,
-            pageSize: 10
+            pageSize: 10,
         }
     });
-
 
     const getData = async () => {
         try {
@@ -72,72 +79,64 @@ function Transactions({ month, monthText }) {
                     search: tableParams.search
                 }
             });
-
+            
             setData(data.transactions);
-            setLoading(false);
-            setTableParams({
-                ...tableParams,
+            setTableParams(prev => ({
+                ...prev,
                 pagination: {
-                    ...tableParams.pagination,
+                    ...prev.pagination,
                     total: data.totalCount,
                 }
-            });
+            }));
             message.success('Data loaded successfully');
         } catch (error) {
-            console.log(error);
+            console.error(error);
             message.error('Error loading data');
+        } finally {
+            setLoading(false);
         }
     };
-
-    const handleTableChange = (pagination, filters, sorter) => {
-        setTableParams({
-            ...tableParams,
-            pagination
-        });
-
-        // `dataSource` is useless since `pageSize` changed
-        if (pagination.pageSize !== tableParams.pagination?.pageSize) {
-            setData([]);
-        }
-    };
-
-    const handleSearch = (value) => {
-        setTableParams({
-            ...tableParams,
-            search: value
-        });
-    }
 
     useEffect(() => {
         getData();
     }, [JSON.stringify(tableParams), month]);
 
-    return (
-        <>
-            <Search
-                placeholder="Search"
-                allowClear
-                onSearch={handleSearch}
-                style={{
-                    width: 300,
-                    padding: "12px 0px"
-                }}
-            />
+    const handleTableChange = (pagination) => {
+        setTableParams({ ...tableParams, pagination });
+    };
 
-            <Table
-                columns={columns}
-                rowKey={(record) => record.id}
-                dataSource={data}
-                pagination={tableParams.pagination}
-                loading={loading}
-                onChange={handleTableChange}
-                size='small'
-                bordered
-                title={() => <strong>Transactions for {monthText}</strong>}
-                scroll={{ y: 540 }}
-            />
-        </>
-    )
+    const handleSearch = (value) => {
+        setTableParams(prev => ({ ...prev, search: value }));
+        getData();
+    };
+
+    return (
+        <Card style={{ margin: 20, padding: 20, borderRadius: 10 }}>
+            <Space direction="vertical" style={{ width: "100%" }}>
+                <Title level={3} style={{ textAlign: 'center', marginBottom: 10 }}>
+                    Transactions for {monthText}
+                </Title>
+                <Search
+                    placeholder="Search transactions..."
+                    allowClear
+                    enterButton={<SearchOutlined />}
+                    onSearch={handleSearch}
+                    style={{ width: 300, marginBottom: 20 }}
+                />
+                <Table
+                    columns={columns}
+                    rowKey={(record) => record.id}
+                    dataSource={data}
+                    pagination={tableParams.pagination}
+                    loading={loading}
+                    onChange={handleTableChange}
+                    size='small'
+                    bordered
+                    scroll={{ y: 500 }}
+                />
+            </Space>
+        </Card>
+    );
 }
 
-export default Transactions
+export default Transactions;
